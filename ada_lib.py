@@ -57,3 +57,7 @@ def __calculate_gaussian_val__(x, r):
     :return: returns the uniform G(0,1) distribution
     """
     return (2*x/r)*np.sqrt(-np.log(r))
+
+def func_rand_exponential(tau, i_seed):
+    u_val = func_rand_uniform(-1,1,i_seed)
+    return -tau*np.log(1-u_val)
