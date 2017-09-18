@@ -59,5 +59,22 @@ def __calculate_gaussian_val__(x, r):
     return (2*x/r)*np.sqrt(-np.log(r))
 
 def func_rand_exponential(tau, i_seed):
+    """
+    :param tau: the exponential decay constant
+    :param i_seed: the random seed being used to seed the distribution
+    :return: the exponentially generated random number
+    """
     u_val = func_rand_uniform(-1,1,i_seed)
     return -tau*np.log(1-u_val)
+
+def func_mean_var(data):
+    """
+    :param data: numpy array of data
+    :return: avg and variance of the data
+    """
+
+    # return np.mean(data), np.var(data)
+
+    avg = np.sum(data)/len(data)
+    var = 1/len(data)*np.sum((data-avg)**2)
+    return avg, var
