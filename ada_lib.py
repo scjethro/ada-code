@@ -17,6 +17,18 @@ def func_range(data):
     """
     return np.max(data) - np.min(data)
 
+def func_median(data):
+    """
+    :param data: numpy array containing the data to work with
+    :return: the median as either the middle value or the half point between the closest values
+    """
+
+    sorted_data = np.sort(data)
+    if len(sorted_data)%2 == 0:
+        return (sorted_data[len(sorted_data)] + sorted_data[len(sorted_data)-1])/2
+    else:
+        return sorted_data[int(len(sorted_data))+1]
+
 def func_cum_dist(data):
     """
     :param data: input a numpy data array
