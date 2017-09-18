@@ -22,12 +22,26 @@ def func_median(data):
     :param data: numpy array containing the data to work with
     :return: the median as either the middle value or the half point between the closest values
     """
-
     sorted_data = np.sort(data)
     if len(sorted_data)%2 == 0:
-        return (sorted_data[len(sorted_data)] + sorted_data[len(sorted_data)-1])/2
+        return (sorted_data[int(len(sorted_data)/2)] + sorted_data[int(len(sorted_data)/2-1)])/2
     else:
-        return sorted_data[int(len(sorted_data))+1]
+        return sorted_data[int(len(sorted_data)/2)+1]
+
+def func_mean_absolute_deviation(data):
+    """
+    :param data: numpy array containing the data
+    :return: the mean absolute deviation compared to the median of the dataset
+    """
+    median = func_median(data)
+    return 1/len(data)*np.sum(np.abs(data-median))
+
+def func_mean_mad(data):
+    """
+    :param data: numpy array of data
+    :return: just returning a tuple of the values
+    """
+    return func_median(data), func_mean_absolute_deviation(data)
 
 def func_cum_dist(data):
     """
@@ -84,9 +98,8 @@ def func_mean_var(data):
     :param data: numpy array of data
     :return: avg and variance of the data
     """
-
-    # return np.mean(data), np.var(data)
-
     avg = np.sum(data)/len(data)
     var = 1/len(data)*np.sum((data-avg)**2)
     return avg, var
+
+    # return np.mean(data), np.var(data)
