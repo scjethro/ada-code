@@ -36,7 +36,7 @@ def func_mean_absolute_deviation(data):
     median = func_median(data)
     return 1/len(data)*np.sum(np.abs(data-median))
 
-def func_mean_mad(data):
+def func_med_mad(data):
     """
     :param data: numpy array of data
     :return: just returning a tuple of the values
@@ -102,4 +102,14 @@ def func_mean_var(data):
     var = 1/len(data)*np.sum((data-avg)**2)
     return avg, var
 
-    # return np.mean(data), np.var(data)
+def func_moments(data, m):
+    """
+    :param data: numpy array of data
+    :param m: the m-th moment that we want to calculate the value up to
+    :return: a numpy array containing the higher moments of the distribution
+    """
+    moments = np.zeros(m)
+    mean, var = func_mean_var(data)
+    N = len(data)
+    for i in range(0,m):
+        moments[i] = 1/N*np.sum(((data-mean)/var)**(m+1))
