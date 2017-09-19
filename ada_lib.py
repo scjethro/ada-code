@@ -110,7 +110,14 @@ def func_moments(data, m):
     """
     moments = np.zeros(m)
     mean, var = func_mean_var(data)
+    moments[0] = mean
+    moments[1] = var
     N = len(data)
     for i in range(0,m):
-        moments[i] = 1/N*np.sum(((data-mean)/np.sqrt(var))**(m+1))
+        if i == 0:
+            moments[0] = mean
+        elif i == 1:
+            moments[1] = var
+        else:
+            moments[i] = 1/N*np.sum(((data-mean)/np.sqrt(var))**(m+1))
     return moments
