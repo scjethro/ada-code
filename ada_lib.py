@@ -113,3 +113,5 @@ def func_moments(data, m):
     N = len(data)
     for i in range(0,m):
         moments[i] = 1/N*np.sum(((data-mean)/var)**(m+1))
+
+    return moments
