@@ -1,15 +1,25 @@
 import numpy as np
+from numba import njit, jit
 
-def func_rand_uniform(a, b, i_seed):
+@njit(nogil = True, cache = True)
+def seed_generate(N):
+    return np.random.randint(0,1e9, size = N)
+
+@njit(nogil = True, cache = True)
+def func_rand_uniform(a, b, i_seed, N):
     """
     :param A: lower limit of uniform distribution
     :param B: upper limit of uniform distribution
     :param i_seed: seed integer that is used
+    :param N: the number of random numbers that we want to generate
     :return: random number from the uniform distribution
     """
+    # return (b-a)*np.random.random() + a
     np.random.seed(i_seed)
-    return (b-a)*np.random.random() + a
+    return (b-a)*np.random.random(N) + a
 
+
+@njit(nogil = True, cache = True)
 def func_range(data):
     """
     :param data: input a numpy data array
@@ -17,6 +27,7 @@ def func_range(data):
     """
     return np.max(data) - np.min(data)
 
+@njit(nogil = True, cache = True)
 def func_median(data):
     """
     :param data: numpy array containing the data to work with
@@ -28,6 +39,7 @@ def func_median(data):
     else:
         return sorted_data[int(len(sorted_data)/2)+1]
 
+@njit(nogil = True, cache = True)
 def func_mean_absolute_deviation(data):
     """
     :param data: numpy array containing the data
@@ -36,6 +48,7 @@ def func_mean_absolute_deviation(data):
     median = func_median(data)
     return 1/len(data)*np.sum(np.abs(data-median))
 
+@njit(nogil = True, cache = True)
 def func_med_mad(data):
     """
     :param data: numpy array of data
@@ -43,6 +56,7 @@ def func_med_mad(data):
     """
     return func_median(data), func_mean_absolute_deviation(data)
 
+@njit(nogil = True, cache = True)
 def func_cum_dist(data):
     """
     :param data: input a numpy data array
@@ -55,27 +69,31 @@ def func_cum_dist(data):
         total[i] += sorted_data[i]
     return total
 
+# @njit(nogil = True, cache = True)
+@jit(cache = True)
 def func_rand_gaussian(avg, sigma, i_seed):
     """
     :param avg: average value of the gaussian distribution that we want to create
     :param sigma: the standard deviation of the distribution
     :param i_seed: an array of 2 seed values that we will use when generating our values
+    :param N: 2*N is the number of Gaussian numbers generated
     :return: an array containing 2 values scaled appropriately for each distribution
     """
-    x_val = func_rand_uniform(-1,1,i_seed[0])
-    y_val = func_rand_uniform(-1,1,i_seed[1])
+    x_val = func_rand_uniform(-1, 1, i_seed[0])
+    y_val = func_rand_uniform(-1, 1, i_seed[1])
 
-    r2 = x_val**2 + y_val**2
+    r2 = x_val ** 2 + y_val ** 2
     r = np.sqrt(r2)
 
     if r2 < 1 and r > 0:
         g1 = __calculate_gaussian_val__(x_val, r)
         g2 = __calculate_gaussian_val__(y_val, r)
-        return np.array([sigma*g1+avg, sigma*g2+avg])
+        return np.array([sigma * g1 + avg, sigma * g2 + avg])
 
     else:
-        return func_rand_gaussian(avg, sigma, np.random.randint(0,1e9, size = 2))
+        return func_rand_gaussian(avg, sigma, np.random.randint(0, 1e9, size=2))
 
+@njit(nogil = True, cache = True)
 def __calculate_gaussian_val__(x, r):
     """
     :param x: the value of x that will be used in the box-muller transform
@@ -84,24 +102,36 @@ def __calculate_gaussian_val__(x, r):
     """
     return (2*x/r)*np.sqrt(-np.log(r))
 
-def func_rand_exponential(tau, i_seed):
+@njit(nogil = True, cache = True)
+def func_rand_exponential(tau, i_seed, N):
     """
     :param tau: the exponential decay constant
     :param i_seed: the random seed being used to seed the distribution
     :return: the exponentially generated random number
     """
-    u_val = func_rand_uniform(-1,1,i_seed)
+    u_val = func_rand_uniform(-1,1,i_seed, N)
     return -tau*np.log(1-u_val)
 
+@njit(nogil = True, cache = True)
 def func_mean_var(data):
     """
     :param data: numpy array of data
     :return: avg and variance of the data
     """
-    avg = np.sum(data)/len(data)
-    var = 1/len(data)*np.sum((data-avg)**2)
+    avg = 0
+    var = 0
+    N = len(data)
+
+    for i in range(0,N):
+        avg += data[i]
+    avg = avg/N
+
+    for i in range(0,N):
+        var += (data[i]-avg)**2
+    var = var/N
     return avg, var
 
+@njit(nogil = True, cache = True)
 def func_moments(data, m):
     """
     :param data: numpy array of data
