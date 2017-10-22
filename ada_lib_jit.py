@@ -1,11 +1,22 @@
 import numpy as np
-from numba import njit, jit
+from numba import njit
 
-@njit(nogil = True, cache = True)
+def func_seed_set(i_seed):
+    """
+    :param i_seed: integer seed that can be used to set the seed of the functions
+    :return: nothing
+    """
+    np.random.seed(i_seed)
+
+@njit( cache = True, nogil = False )
 def seed_generate(N):
+    """
+    :param N: the number of seeds that you want to generate
+    :return: a random selection of ints generate
+    """
     return np.random.randint(0,1e9, size = N)
 
-@njit(nogil = True, cache = True)
+@njit( cache = True, nogil = False )
 def func_rand_uniform(a, b, i_seed, N):
     """
     :param A: lower limit of uniform distribution
@@ -15,11 +26,11 @@ def func_rand_uniform(a, b, i_seed, N):
     :return: random number from the uniform distribution
     """
     # return (b-a)*np.random.random() + a
-    np.random.seed(i_seed)
+    # np.random.seed(i_seed)
     return (b-a)*np.random.random(N) + a
 
 
-@njit(nogil = True, cache = True)
+@njit( cache = True, nogil = False )
 def func_range(data):
     """
     :param data: input a numpy data array
@@ -27,7 +38,7 @@ def func_range(data):
     """
     return np.max(data) - np.min(data)
 
-@njit(nogil = True, cache = True)
+@njit( cache = True, nogil = False )
 def func_median(data):
     """
     :param data: numpy array containing the data to work with
@@ -37,18 +48,22 @@ def func_median(data):
     if len(sorted_data)%2 == 0:
         return (sorted_data[int(len(sorted_data)/2)] + sorted_data[int(len(sorted_data)/2-1)])/2
     else:
-        return sorted_data[int(len(sorted_data)/2)+1]
+        return sorted_data[int(len(sorted_data)/2)]
 
-@njit(nogil = True, cache = True)
+@njit( cache = True, nogil = False )
 def func_mean_absolute_deviation(data):
     """
     :param data: numpy array containing the data
     :return: the mean absolute deviation compared to the median of the dataset
     """
     median = func_median(data)
-    return 1/len(data)*np.sum(np.abs(data-median))
+    total = 0
+    for i in range(0, len(data)):
+        total += np.abs(data[i]-median)
 
-@njit(nogil = True, cache = True)
+    return 1/len(data) * total
+
+@njit( cache = True, nogil = False )
 def func_med_mad(data):
     """
     :param data: numpy array of data
@@ -56,44 +71,66 @@ def func_med_mad(data):
     """
     return func_median(data), func_mean_absolute_deviation(data)
 
-@njit(nogil = True, cache = True)
-def func_cum_dist(data):
+@njit( cache = True, nogil = False )
+def func_histogram(data, bins):
     """
     :param data: input a numpy data array
     :return: return an array containing the cumulative distribution function
     """
-    sorted_data = np.sort(data)
-    length = len(data)
-    total = np.zeros(length)
-    for i in range(0, length):
-        total[i] += sorted_data[i]
-    return total
+    
+    diff = np.max(data) - np.min(data)
+    step = diff/bins
+    
+    hist = np.zeros(bins)
 
-# @njit(nogil = True, cache = True)
-@jit(cache = True)
-def func_rand_gaussian(avg, sigma, i_seed):
-    """
-    :param avg: average value of the gaussian distribution that we want to create
-    :param sigma: the standard deviation of the distribution
-    :param i_seed: an array of 2 seed values that we will use when generating our values
-    :param N: 2*N is the number of Gaussian numbers generated
-    :return: an array containing 2 values scaled appropriately for each distribution
-    """
-    x_val = func_rand_uniform(-1, 1, i_seed[0])
-    y_val = func_rand_uniform(-1, 1, i_seed[1])
+    old = np.min(data)    
+    for i in range(0, bins):
+        for j in data:
+            if ( j >= old ) and ( j <= old + step ):
+                hist[i] += 1
+        old +=step
+    if len(hist) != len(data):
+        hist[-1] += 1
+    return hist, hist.cumsum()
 
-    r2 = x_val ** 2 + y_val ** 2
+
+@njit(cache=True, nogil = False )
+def func_rand_gaussian(avg, sigma, seed ,N):
+    """
+    vectorised function to generate N gaussians numbers quickly and return them.
+
+    :param avg: the average value of the Gaussians generated
+    :param sigma: the standard deviation of the generated Gaussians
+    :param seed: the seed that you want to seed the generator with
+    :param N: the number of Gaussian numbers you would like to generate
+    :return: an array of the sampled Gaussian numbers
+    """
+
+    x = func_rand_uniform(-1, 1, seed, (N, 2))
+    r2 = x[:, 0] ** 2 + x[:, 1] ** 2
     r = np.sqrt(r2)
 
-    if r2 < 1 and r > 0:
-        g1 = __calculate_gaussian_val__(x_val, r)
-        g2 = __calculate_gaussian_val__(y_val, r)
-        return np.array([sigma * g1 + avg, sigma * g2 + avg])
+    empty = N
+    output = np.zeros(N)
 
-    else:
-        return func_rand_gaussian(avg, sigma, np.random.randint(0, 1e9, size=2))
+    while empty != 0:
+        for i in range(0, len(r2)):
+            if r2[i] < 1 and r[i] > 0:
+                if empty != 0:
+                    g1 = __calculate_gaussian_val__(x[i][0], r[i])
+                    output[N - empty] = sigma*g1+avg
+                    empty -= 1
+                if empty != 0:
+                    g2 = __calculate_gaussian_val__(x[i][1], r[i])
+                    output[N - empty] = sigma*g2+avg
+                    empty -= 1
+        if empty != 0:
+            x = func_rand_uniform(-1, 1, seed, (N + empty, 2))[N:]
+            r2 = x[:,0] ** 2 + x[:,1] ** 2
+            r = np.sqrt(r2)
+    return output
 
-@njit(nogil = True, cache = True)
+@njit( cache = True, nogil = False )
 def __calculate_gaussian_val__(x, r):
     """
     :param x: the value of x that will be used in the box-muller transform
@@ -102,7 +139,7 @@ def __calculate_gaussian_val__(x, r):
     """
     return (2*x/r)*np.sqrt(-np.log(r))
 
-@njit(nogil = True, cache = True)
+@njit( cache = True, nogil = False )
 def func_rand_exponential(tau, i_seed, N):
     """
     :param tau: the exponential decay constant
@@ -112,7 +149,7 @@ def func_rand_exponential(tau, i_seed, N):
     u_val = func_rand_uniform(-1,1,i_seed, N)
     return -tau*np.log(1-u_val)
 
-@njit(nogil = True, cache = True)
+@njit( cache = True, nogil = False )
 def func_mean_var(data):
     """
     :param data: numpy array of data
@@ -128,26 +165,48 @@ def func_mean_var(data):
 
     for i in range(0,N):
         var += (data[i]-avg)**2
-    var = var/N
+    var = var/(N-1)
     return avg, var
 
-@njit(nogil = True, cache = True)
+@njit( cache = True, nogil = False )
 def func_moments(data, m):
     """
     :param data: numpy array of data
     :param m: the m-th moment that we want to calculate the value up to
     :return: a numpy array containing the higher moments of the distribution
     """
-    moments = np.zeros(m)
     mean, var = func_mean_var(data)
-    moments[0] = mean
-    moments[1] = var
+    sigma = np.sqrt(var)
+
+    moments = np.zeros(m)
     N = len(data)
     for i in range(0,m):
-        if i == 0:
-            moments[0] = mean
-        elif i == 1:
-            moments[1] = var
-        else:
-            moments[i] = 1/N*np.sum(((data-mean)/np.sqrt(var))**(m+1))
+        moments [i] = 1/N*np.sum(((((data-mean)/(sigma)))**(i+1)))
     return moments
+
+@njit( cache = True, nogil = False )
+def func_invert_mat(matrix):
+    """
+    :param matrix: a 2x2 matrix that needs to be inverted
+    :return: the inverse of the matrix
+    """
+    mat = np.zeros((2,2))
+    a = matrix[0,0]
+    b = matrix[0,1]
+    c = matrix[1,0]
+    d = matrix[1,1]
+    det = a*d - b*c
+
+    mat[0,0] = d
+    mat[0,1] = -b
+    mat[1,0] = -c
+    mat[1,1] = a
+    return 1/det*mat
+
+@njit( cache = True, nogil = False )
+def func_determinant(matrix):
+    a = matrix[0, 0]
+    b = matrix[0, 1]
+    c = matrix[1, 0]
+    d = matrix[1, 1]
+    return a * d - b * c
