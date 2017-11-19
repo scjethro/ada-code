@@ -72,7 +72,7 @@ def func_med_mad(data):
     return func_median(data), func_mean_absolute_deviation(data)
 
 @njit( cache = True, nogil = False )
-def func_histogram(data, bins):
+def func_histogram(data, bins, density):
     """
     :param data: input a numpy data array
     :return: return an array containing the cumulative distribution function
@@ -83,6 +83,9 @@ def func_histogram(data, bins):
     
     hist = np.zeros(bins)
 
+    mins = np.min(data)
+    bin_nums = np.zeros(bins)
+
     old = np.min(data)    
     for i in range(0, bins):
         for j in data:
@@ -91,7 +94,14 @@ def func_histogram(data, bins):
         old +=step
     if len(hist) != len(data):
         hist[-1] += 1
-    return hist, hist.cumsum()
+
+    for bin in range(0, len(bin_nums)):
+        bin_nums[bin] =  mins + (bin+0.5)*step
+
+    if density == True:
+        hist = hist/(len(data) * step)
+
+    return hist, (hist*step).cumsum(), bin_nums
 
 
 @njit(cache=True, nogil = False )
@@ -210,3 +220,7 @@ def func_determinant(matrix):
     c = matrix[1, 0]
     d = matrix[1, 1]
     return a * d - b * c
+
+@njit( cache = True, nogil = False )
+def func_chi2(data, fit, var):
+    return np.sum(((data-fit)/var)**2)
