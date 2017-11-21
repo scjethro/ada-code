@@ -224,3 +224,43 @@ def func_determinant(matrix):
 @njit( cache = True, nogil = False )
 def func_chi2(data, fit, var):
     return np.sum(((data-fit)/var)**2)
+
+
+# sine function
+@njit(cache=True, nogil=True)
+def si(w, t):
+    return np.sin(w * t)
+
+
+# cosine function
+@njit(cache=True, nogil=True)
+def ci(w, t):
+    return np.cos(w * t)
+
+
+# full periodogram scaling
+@njit(cache=True, nogil=True)
+def func_periodogram_scale(x_i, w, t_i, sigma_i):
+    S_hat = 0.0
+    X0_hat = 0.0
+    C_hat = 0.0
+
+    s_i = si(w, t_i)
+    c_i = ci(w, t_i)
+    error = 1.0
+
+    while error > 1e-10:
+        X_old = X0_hat
+        S_old = S_hat
+        C_old = C_hat
+
+        X0_hat = np.sum((x_i - S_hat * s_i - C_hat * c_i) / (sigma_i ** 2)) / (np.sum(1 / sigma_i ** 2))
+        S_hat = np.sum(((x_i - X0_hat - C_hat * c_i) * s_i) / (sigma_i ** 2)) / (np.sum(s_i ** 2 / sigma_i ** 2))
+        C_hat = np.sum(((x_i - X0_hat - S_hat * s_i) * c_i) / (sigma_i ** 2)) / (np.sum(c_i ** 2 / sigma_i ** 2))
+        error = np.max(np.array([np.abs(X_old - X0_hat), np.abs(C_old - C_hat), np.abs(S_old - S_hat)]))
+
+    var_x0 = 1 / np.sum(1 / sigma_i ** 2)
+    var_S = 1 / np.sum(s_i ** 2 / sigma_i ** 2)
+    var_C = 1 / np.sum(c_i ** 2 / sigma_i ** 2)
+
+    return (X0_hat, S_hat, C_hat, var_x0, var_S, var_C)
